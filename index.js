@@ -8,6 +8,7 @@ var VSHADER_SOURCE = `
   attribute vec3 a_Normal;
   varying vec2 v_UV;
   varying vec3 v_Normal;
+  varying vec4 v_VertPos;
   uniform mat4 u_ModelMatrix;
   uniform mat4 u_GlobalRotateMatrix;
   uniform mat4 u_ViewMatrix;
@@ -16,6 +17,7 @@ var VSHADER_SOURCE = `
     gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_GlobalRotateMatrix * u_ModelMatrix * a_Position;
     v_UV = a_UV;
     v_Normal = a_Normal;
+    v_VertPos = u_ModelMatrix * a_Position;
   }`;
 
 
@@ -28,6 +30,8 @@ var FSHADER_SOURCE = `
   uniform sampler2D u_Sampler0;
   uniform sampler2D u_Sampler1;
   uniform int u_whichTexture;
+  uniform vec3 u_lightPos;
+  varying vec4 v_VertPos;
   void main() {
       
       if (u_whichTexture == -3) {
@@ -48,11 +52,19 @@ var FSHADER_SOURCE = `
       } else {                                // Error, put Reddish
         gl_FragColor = vec4(1,.2,.2,1);
       }
+
+      vec3 lightVector = vec3(v_VertPos) - u_lightPos;
+      float r = length(lightVector);
+      if (r < 1.0) {
+        gl_FragColor = vec4(1, 0, 0, 1);
+      } else if (r < 2.0) {
+        gl_FragColor = vec4(0, 1, 0, 1);
+      }
   }`
 
 
 // Globals for the WebGL setup
-let canvas, gl, a_Position, a_UV, u_FragColor, u_Size, u_ModelMatrix, u_ProjectionMatrix, u_ViewMatrix, u_GlobalRotateMatrix, u_Sampler0, u_Sampler1, u_whichTexture;
+let canvas, gl, a_Position, a_UV, u_FragColor, u_Size, u_ModelMatrix, u_ProjectionMatrix, u_ViewMatrix, u_GlobalRotateMatrix, u_Sampler0, u_Sampler1, u_whichTexture, u_lightPos;
 // Global for the global sideways camera angle
 let g_globalAngle = 0;
 // Globals for the performance calculation
@@ -168,7 +180,8 @@ let g_tailAngle = 0;
 let g_tailAnimation = false;
 // Global for the normals
 g_normalOn = false;
-
+// GLobal for the light position
+let g_lightPos = [0, 1, -2];
 
 function setupWebGL() {
   // Retrieve <canvas> element
@@ -268,6 +281,13 @@ function connectVariablesToGLSL() {
     console.log('Failed to get the storage location of u_whichTexture');
     return false;
   }
+  
+  // Get the storage location of u_lightPos
+  u_lightPos = gl.getUniformLocation(gl.program, 'u_lightPos');
+  if (!u_lightPos) {
+    console.log('Failed to get the storage location of u_lightPos');
+    return false;
+  }
 
   // Set an initial value for the matrix to identify
   var identityM = new Matrix4();
@@ -331,6 +351,11 @@ function addActionsForHTMLUI() {
 
   // Angle Slider Events
   document.getElementById('angleSlide').addEventListener('mousemove', function () { g_globalAngle = this.value; renderScene(); });
+  
+  // Light Position Slider Events
+  document.getElementById('lightSlideX').addEventListener('mousemove', function () { g_lightPos[0] = this.value / 100; renderScene(); });
+  document.getElementById('lightSlideY').addEventListener('mousemove', function () { g_lightPos[1] = this.value / 100; renderScene(); });
+  document.getElementById('lightSlideZ').addEventListener('mousemove', function () { g_lightPos[2] = this.value / 100; renderScene(); });
 }
 
 
@@ -552,6 +577,8 @@ function updateAnimationAngles() {
   if (g_tailAnimation === false) {
     g_tailAngle = 0;
   }  
+
+  g_lightPos[0] = Math.cos(g_seconds) * 5; // Simple light animation function
 }
 
 
@@ -727,6 +754,17 @@ function renderScene() {
   walls.matrix.translate(0, -0.75, 0.0); // Y placement for the walls
   walls.matrix.translate(-0.5, 0, -0.5); // X and Z placement for the walls
   walls.render(); // Rendering for the wall
+
+  // Pass the light position to GLSL
+  gl.uniform3f(u_lightPos, g_lightPos[0], g_lightPos[1], g_lightPos[2]);
+  // Draw the light
+  var light = new Cube(); // Creating the light as a large rectangle
+  light.color = [2, 2, 0, 1]; // "Color" the light extra yellow
+  light.textureNum = -2; // Use the colors on the light
+  light.matrix.translate(g_lightPos[0], g_lightPos[1], g_lightPos[2]); // Setting the X, Y, and Z placements for the light 
+  light.matrix.scale(0.1, 0.1, 0.1); // Scaling for the light
+  light.matrix.translate(-0.5, -0.5, -0.5); // Setting the X, Y, and Z placements for the light
+  light.render(); // Rendering for the light
 
   // Draw the sphere
   var sphere = new Sphere();
