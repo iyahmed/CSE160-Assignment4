@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>CSE 160: Assignment 4 - Lighting (Ismail Ahmed, iyahmed@ucsc.edu)</title>
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+</head>
+
+<body onload="main()">
+  <canvas id="webgl" width="640" height="400">
+    Please use a browser that supports "canvas"
+  </canvas>
+
+  <p id="numdot"> XXX </p>
+
+  <h1>CSE 160: Assignment 4 - Lighting (Ismail Ahmed, iyahmed@ucsc.edu)</h1>
+  
+  <h2>Walk on the Staircase of Graphics Next to the Statue of Pioneers, Avoid the Tricky Red Blocks of Roadblocks, and Enjoy the Dynamic Animation of the Blocky Animal of CSE160!</h2>
+ 
+  <p>
+    Normals:
+    <button type="button" id="normalOn">Normal On</button>
+    <button type="button" id="normalOff">Normal Off</button>
+  </p>
+
+  <p>
+    Camera Angle <input type="range" min="0" max="90" value="5" class="slider" id="angleSlide">
+  </p>
+
+  <p>
+    frontLeftLegPaw <input type="range" min="-45" max="45" value="0" class="slider" id="frontLeftLegPawSlide">
+    Animation:
+    <button type="button" id="animationfrontLeftLegPawOnButton">ON</button>
+    <button type="button" id="animationfrontLeftLegPawOffButton">OFF</button>
+  </p>
+  <p>
+    frontLeftLegThigh<input type="range" min="-45" max="45" value="0" class="slider" id="frontLeftLegThighSlide">
+    Animation:
+    <button type="button" id="animationfrontLeftLegThighOnButton">ON</button>
+    <button type="button" id="animationfrontLeftLegThighOffButton">OFF</button>
+  </p>
+  <p>
+    frontRightLegPaw <input type="range" min="-45" max="45" value="0" class="slider" id="frontRightLegPawSlide">
+    Animation:
+    <button type="button" id="animationfrontRightLegPawOnButton">ON</button>
+    <button type="button" id="animationfrontRightLegPawOffButton">OFF</button>
+  </p>
+  <p>
+    frontRightLegThigh<input type="range" min="-45" max="45" value="0" class="slider" id="frontRightLegThighSlide">
+    Animation:
+    <button type="button" id="animationfrontRightLegThighOnButton">ON</button>
+    <button type="button" id="animationfrontRightLegThighOffButton">OFF</button>
+  </p>
+  <p>
+    backLeftLegPaw <input type="range" min="-45" max="45" value="0" class="slider" id="backLeftLegPawSlide">
+    Animation:
+    <button type="button" id="animationbackLeftLegPawOnButton">ON</button>
+    <button type="button" id="animationbackLeftLegPawOffButton">OFF</button>
+  </p>
+  <p>
+    backLeftLegThigh<input type="range" min="-45" max="45" value="0" class="slider" id="backLeftLegThighSlide">
+    Animation:
+    <button type="button" id="animationbackLeftLegThighOnButton">ON</button>
+    <button type="button" id="animationbackLeftLegThighOffButton">OFF</button>
+  </p>
+  <p>
+    backRightLegPaw <input type="range" min="-45" max="45" value="0" class="slider" id="backRightLegPawSlide">
+    Animation:
+    <button type="button" id="animationbackRightLegPawOnButton">ON</button>
+    <button type="button" id="animationbackRightLegPawOffButton">OFF</button>
+  </p>
+  <p>
+    backRightLegThigh<input type="range" min="-45" max="45" value="0" class="slider" id="backRightLegThighSlide">
+    Animation:
+    <button type="button" id="animationbackRightLegThighOnButton">ON</button>
+    <button type="button" id="animationbackRightLegThighOffButton">OFF</button>
+  </p>
+  <p>
+    Tail<input type="range" min="-45" max="45" value="0" class="slider" id="tailSlide">
+    Animation:
+    <button type="button" id="animationTailOnButton">ON</button>
+    <button type="button" id="animationTailOffButton">OFF</button>
+  </p>
+
+  <p>
+    Grader's Note: The simple story of this game is to explore the scene that highlights computer graphics and CSE160! The Staircase of Graphics is light blue and has a cool spiral pattern. The Red Blocks of Roadblocks are spread across the scene. In contrast, the Statue of Pioneers has multiple textures and is right near the center of the world, and the Blocky Animal is a dynamic and animated gray cat wearing a crown. The Staircase of Graphics is meant to symbolize the miraculous growth of computer graphics, from a niche academic interest to playing an essential world of how we view ourselves through cultural expression in CGI-made movies, TV shows, and video games. The Red Blocks of Roadblocks represent the various challenges and difficulties computer scientists had to overcome to research today's advanced understanding and practice of computer graphics. The Statue of Pioneers is meant to symbolize all people who made a positive impact on the field of computer graphics, from the early days of a few people tinkering with digital machines to the present day of massive corporations, research institutions, and governments pushing the limits of human knowledge to advance the state-of-the-art. The Blocky Animal of a gray cat wearing a crown symbolizes the progress and learning CSE160 students make in their understanding of computer graphics throughout the course.
+  </p>
+
+  <script src="lib/webgl-utils.js"></script>
+  <script src="lib/webgl-debug.js"></script>
+  <script src="lib/cuon-utils.js"></script>
+  <script src="lib/cuon-matrix-cse160.js"></script>
+  <script src="Triangle.js"></script>
+  <script src="Cube.js"></script>
+  <script src="Prism.js"></script>
+  <script src="Camera.js"></script>
+  <script src="index.js"></script>
+</body>
+
+</html>
