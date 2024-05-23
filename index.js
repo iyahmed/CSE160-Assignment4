@@ -728,6 +728,16 @@ function renderScene() {
   walls.matrix.translate(-0.5, 0, -0.5); // X and Z placement for the walls
   walls.render(); // Rendering for the wall
 
+  // Draw the sphere
+  var sphere = new Sphere();
+  if (g_normalOn === true) {
+    sphere.textureNum = -3; // Use the normals on the sphere
+  } else {
+    sphere.textureNum = -2; // Use the UV coordinates on the sphere
+  }
+  sphere.matrix.translate(-2, 0.25, 0); // Setting the X and Y placements for the sphere
+  sphere.render();
+
   // Draw the ground cube for 32 x 32
   var ground = new Cube(); // Creating the ground as a large rectangle
   ground.color = [0, 1, 0, 1]; // Color the ground green
