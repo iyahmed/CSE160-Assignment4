@@ -26,61 +26,74 @@ var FSHADER_SOURCE = `
   precision mediump float;
   varying vec2 v_UV;
   varying vec3 v_Normal;
+  varying vec4 v_VertPos;
   uniform vec4 u_FragColor;
   uniform sampler2D u_Sampler0;
   uniform sampler2D u_Sampler1;
   uniform int u_whichTexture;
   uniform vec3 u_lightPos;
-  uniform vec3 u_lightColor;
-  uniform vec3 u_ambientColor;
-  uniform vec3 u_viewDir;
-  uniform vec3 u_lightDir;
+  uniform vec3 u_cameraPos;
+  uniform bool u_lightOn;
   void main() {
-      vec4 color; 
       if (u_whichTexture == -3) {
-        color = vec4((v_Normal+1.0)/2.0, 1.0); // Use normal
+        gl_FragColor = vec4((v_Normal+1.0)/2.0, 1.0); // Use normal
       
       } else if (u_whichTexture == -2) {             // Use color
-        color = u_FragColor;
+        gl_FragColor = u_FragColor;
 
       } else if (u_whichTexture == -1) {      // Use UV debug color
-        color = vec4(v_UV,1.0,1.0);
+        gl_FragColor = vec4(v_UV,1.0,1.0);
 
       } else if (u_whichTexture == 0) {       // Use texture0
-        color = texture2D(u_Sampler0, v_UV);
+        gl_FragColor = texture2D(u_Sampler0, v_UV);
       
       } else if (u_whichTexture == 1) {       // Use texture1
-        color = texture2D(u_Sampler1, v_UV);
+        gl_FragColor = texture2D(u_Sampler1, v_UV);
       
       } else {                                // Error, put Reddish
-        color = vec4(1,.2,.2,1);
+        gl_FragColor = vec4(1,.2,.2,1);
 
       }
 
       // Implementing Phong lighting
-      vec3 lightDir = normalize(u_lightPos - vec3(v_VertPos));
-      vec3 norm = normalize(v_Normal);
-      vec3 reflectDir = reflect(-lightDir, norm);
-      vec3 viewDir = normalize(u_viewDir - vec3(v_VertPos));
+      vec3 lightVector = u_lightPos - vec3(v_VertPos);
+      float r = length(lightVector);
 
+      // N dot L
+      vec3 L = normalize(lightVector);
+      vec3 N = normalize(v_Normal);
+      float nDotL = max(dot(N, L), 0.0);
+
+      // Reflection
+      vec3 R = reflect(-L, N);
+
+      // Eye
+      vec3 E = normalize(u_cameraPos - vec3(v_VertPos));
+      
       // Specular
-      float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
-      vec3 specular = spec * u_lightColor;
-
-      // Ambient
-      vec3 ambient = color.rgb * u_ambientColor;
+      float specular = pow(max(dot(E, R), 0.0), 64.0) * 0.8;
 
       // Diffuse
-      float diff = max(dot(norm, lightDir), 0.0);
-      vec3 diffuse = color.rgb * u_lightColor * diff;
+      vec3 diffuse = vec3(1.0, 1.0, 0.9) * vec3(gl_FragColor) * nDotL * 0.7;
 
-      // Final light
-      gl_FragColor = vec4(specular + ambient + diffuse, color.a);
+      // Ambient
+      vec3 ambient = vec3(gl_FragColor) * 0.2;
+
+      // Phong lighting
+      if (u_lightOn) {
+        if (u_whichTexture == 0 || u_whichTexture == 1) {
+          gl_FragColor = vec4(specular+diffuse+ambient, 1.0);
+        } else if (u_whichTexture == 1) {
+          gl_FragColor = vec4(specular+diffuse+ambient, 1.0);
+        } else {
+          gl_FragColor = vec4(diffuse+ambient, 1.0);
+        }
+      }
   }`
 
 
 // Globals for the WebGL setup
-let canvas, gl, a_Position, a_UV, u_FragColor, u_Size, u_ModelMatrix, u_ProjectionMatrix, u_ViewMatrix, u_GlobalRotateMatrix, u_Sampler0, u_Sampler1, u_whichTexture, u_lightPos, u_lightColor, u_ambientColor, u_lightDir, u_viewDir;
+let canvas, gl, a_Position, a_UV, a_Normal, u_FragColor, u_Size, u_ModelMatrix, u_ProjectionMatrix, u_ViewMatrix, u_GlobalRotateMatrix, u_Sampler0, u_Sampler1, u_whichTexture, u_lightPos, u_lightColor, u_ambientColor, u_lightDir, u_cameraPos, u_lightOn;
 // Global for the global sideways camera angle
 let g_globalAngle = 0;
 // Globals for the performance calculation
@@ -196,8 +209,11 @@ let g_tailAngle = 0;
 let g_tailAnimation = false;
 // Global for the normals
 g_normalOn = false;
-// GLobal for the light position
+// Global for the light position
 let g_lightPos = [0, 1, -2];
+// Global for the light boolean
+let g_lightOn = true; 
+
 
 function setupWebGL() {
   // Retrieve <canvas> element
@@ -305,31 +321,17 @@ function connectVariablesToGLSL() {
     return false;
   }
   
-  // Get the storage location of u_lightColor
-  u_lightColor = gl.getUniformLocation(gl.program, 'u_lightColor');
-  if (!u_lightColor) {
-    console.log('Failed to get the storage location of u_lightColor');
+  // Get the storage location of u_cameraPos
+  u_cameraPos = gl.getUniformLocation(gl.program, 'u_cameraPos');
+  if (!u_cameraPos) {
+    console.log('Failed to get the storage location of u_cameraPos');
     return false;
   }
   
-  // Get the storage location of u_ambientColor
-  u_ambientColor = gl.getUniformLocation(gl.program, 'u_ambientColor');
-  if (!u_ambientColor) {
-    console.log('Failed to get the storage location of u_ambientColor');
-    return false;
-  }
-  
-  // Get the storage location of u_lightDir
-  u_lightDir = gl.getUniformLocation(gl.program, 'u_lightDir');
-  if (!u_lightDir) {
-    console.log('Failed to get the storage location of u_lightDir');
-    return false;
-  }
-  
-  // Get the storage location of u_viewDir
-  u_viewDir = gl.getUniformLocation(gl.program, 'u_viewDir');
-  if (!u_viewDir) {
-    console.log('Failed to get the storage location of u_viewDir');
+  // Get the storage location of u_lightOn
+  u_lightOn = gl.getUniformLocation(gl.program, 'u_lightOn');
+  if (!u_lightOn) {
+    console.log('Failed to get the storage location of u_lightOn');
     return false;
   }
 
@@ -365,15 +367,19 @@ function addActionsForHTMLUI() {
   document.getElementById('animationbackRightLegThighOnButton').onclick = function () { g_backRightLegThighAnimation = true; };
   document.getElementById('animationbackRightLegPawOffButton').onclick = function () { g_backRightLegPawAnimation = false; };
   document.getElementById('animationbackRightLegPawOnButton').onclick = function () { g_backRightLegPawAnimation = true; };
-
-  // Normal's Button Events
-  document.getElementById('normalOn').onclick = function () { g_normalOn = true; }
-  document.getElementById('normalOff').onclick = function () { g_normalOn = false; }
   
   // Tail's Button Events
   document.getElementById('animationTailOffButton').onclick = function () { g_tailAnimation = false; };
   document.getElementById('animationTailOnButton').onclick = function () { g_tailAnimation = true; };
   
+  // Normals' Button Events
+  document.getElementById('normalOn').onclick = function () { g_normalOn = true; }
+  document.getElementById('normalOff').onclick = function () { g_normalOn = false; }
+
+  // Light's Button Events
+  document.getElementById('lightOn').onclick = function () { g_lightOn = true; }
+  document.getElementById('lightOff').onclick = function () { g_lightOn = false; }
+
   // Front-Left Leg's Color Slider Events
   document.getElementById('frontLeftLegPawSlide').addEventListener('mousemove', function () { g_frontLeftLegPawAngle = this.value; renderScene(); });
   document.getElementById('frontLeftLegThighSlide').addEventListener('mousemove', function () { g_frontLeftLegThighAngle = this.value; renderScene(); });
@@ -622,7 +628,7 @@ function updateAnimationAngles() {
     g_tailAngle = 0;
   }  
 
-  g_lightPos[0] = Math.cos(g_seconds) * 5; // Simple light animation function
+  g_lightPos[0] = Math.cos(g_seconds) * 2.3; // Simple light animation function
 }
 
 
@@ -786,33 +792,32 @@ function renderScene() {
   // Draw the map's wall cubes
   // drawMap();
 
-  // Draw the walls for the lighting
-  var walls = new Cube(); // Creating the walls as a large rectangle
-  walls.color = [0.7, 0.7, 0.7, 1]; // Color the walls white
-  if (g_normalOn === true) {
-    walls.textureNum = -3; // Use the normals on the walls
-  } else {
-    walls.textureNum = -2; // Use the colors on the walls
-  }
-  walls.matrix.scale(-10, -10, -10); // Scaling for the walls with negatives for normals
-  walls.matrix.translate(0, -0.75, 0.0); // Y placement for the walls
-  walls.matrix.translate(-0.5, 0, -0.5); // X and Z placement for the walls
-  walls.render(); // Rendering for the wall
-
   // Pass the light attributes to GLSL
   gl.uniform3f(u_lightPos, g_lightPos[0], g_lightPos[1], g_lightPos[2]);
-  gl.uniform3f(u_lightDir, g_lightPos[0], g_lightPos[1], g_lightPos[2]);
-  gl.uniform3f(u_viewDir, g_camera.eye.elements[0], g_camera.eye.elements[1], g_camera.eye.elements[2]);
-  gl.uniform3f(u_lightColor, 0.1, 0.1, 0.1); // Weak white ambient light
-  gl.uniform3f(u_lightPos, 1, 1, 1); // Strong white diffuse and specular light
+  gl.uniform3f(u_cameraPos, g_camera.eye.elements[0], g_camera.eye.elements[1], g_camera.eye.elements[2]);
+  gl.uniform1i(u_lightOn, g_lightOn);
+  
   // Draw the light cube
   var light = new Cube(); // Creating the light as a large rectangle
   light.color = [2, 2, 0, 1]; // "Color" the light extra yellow
   light.textureNum = -2; // Use the colors on the light
   light.matrix.translate(g_lightPos[0], g_lightPos[1], g_lightPos[2]); // Setting the X, Y, and Z placements for the light 
-  light.matrix.scale(0.1, 0.1, 0.1); // Scaling for the light
+  light.matrix.scale(-0.1, -0.1, -0.1); // Scaling for the light with negatives for normals
   light.matrix.translate(-0.5, -0.5, -0.5); // Setting the X, Y, and Z placements for the light
   light.render(); // Rendering for the light
+  
+  // Draw the walls for the lighting
+  var walls = new Cube(); // Creating the walls as a large rectangle
+  walls.color = [0.8, 0.8, 0.8, 1]; // Color the walls white
+  if (g_normalOn === true) {
+    walls.textureNum = -3; // Use the normals on the walls
+  } else {
+    walls.textureNum = -2; // Use the colors on the walls
+  }
+  walls.matrix.scale(-5, -5, -5); // Scaling for the walls with negatives for normals
+  walls.matrix.translate(0, -0.75, 0.0); // Y placement for the walls
+  walls.matrix.translate(-0.5, 0, -0.5); // X and Z placement for the walls
+  walls.render(); // Rendering for the wall
 
   // Draw the sphere
   var sphere = new Sphere();
