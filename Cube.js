@@ -3,6 +3,7 @@ class Cube {
         this.type = 'cube';
         this.color = [1.0, 1.0, 1.0, 1.0];
         this.matrix = new Matrix4();
+        this.normalMatrix = new Matrix4();
         this.textureNum = -1;
         this.cubeVerts32 = new Float32Array([
             0, 0, 0,  1, 1, 0,  1, 0, 0,

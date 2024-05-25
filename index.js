@@ -10,13 +10,14 @@ var VSHADER_SOURCE = `
   varying vec3 v_Normal;
   varying vec4 v_VertPos;
   uniform mat4 u_ModelMatrix;
+  uniform mat4 u_NormalMatrix;
   uniform mat4 u_GlobalRotateMatrix;
   uniform mat4 u_ViewMatrix;
   uniform mat4 u_ProjectionMatrix;
   void main() {
     gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_GlobalRotateMatrix * u_ModelMatrix * a_Position;
     v_UV = a_UV;
-    v_Normal = a_Normal;
+    v_Normal = normalize(vec3(u_NormalMatrix * vec4(a_Normal, 1)));
     v_VertPos = u_ModelMatrix * a_Position;
   }`;
 
@@ -93,7 +94,7 @@ var FSHADER_SOURCE = `
 
 
 // Globals for the WebGL setup
-let canvas, gl, a_Position, a_UV, a_Normal, u_FragColor, u_Size, u_ModelMatrix, u_ProjectionMatrix, u_ViewMatrix, u_GlobalRotateMatrix, u_Sampler0, u_Sampler1, u_whichTexture, u_lightPos, u_lightColor, u_ambientColor, u_lightDir, u_cameraPos, u_lightOn;
+let canvas, gl, a_Position, a_UV, a_Normal, u_FragColor, u_Size, u_ModelMatrix, u_ProjectionMatrix, u_ViewMatrix, u_GlobalRotateMatrix, u_Sampler0, u_Sampler1, u_whichTexture, u_lightPos, u_lightColor, u_ambientColor, u_lightDir, u_cameraPos, u_lightOn, u_NormalMatrix;
 // Global for the global sideways camera angle
 let g_globalAngle = 0;
 // Globals for the performance calculation
@@ -271,6 +272,13 @@ function connectVariablesToGLSL() {
     console.log('Failed to get the storage location of u_ModelMatrix');
     return;
   }
+
+  // Get the storage location of u_NormalMatrix
+  u_NormalMatrix = gl.getUniformLocation(gl.program, 'u_NormalMatrix');
+  if (!u_NormalMatrix) {
+    console.log('Failed to get the storage location of u_NormalMatrix');
+    return;
+  }
   
   // Get the storage location of u_ViewMatrix
   u_ViewMatrix = gl.getUniformLocation(gl.program, 'u_ViewMatrix');
@@ -338,6 +346,7 @@ function connectVariablesToGLSL() {
   // Set an initial value for the matrix to identify
   var identityM = new Matrix4();
   gl.uniformMatrix4fv(u_ModelMatrix, false, identityM.elements);
+  gl.uniformMatrix4fv(u_NormalMatrix, false, identityM.elements);
 }
 
 
@@ -780,6 +789,12 @@ function renderScene() {
   // Pass the matrix to the u_ModelMatrix attribute
   var cameraRotMat = new Matrix4().rotate(rotateDelta, 0, 1, 0);
   gl.uniformMatrix4fv(u_ModelMatrix, false, cameraRotMat.elements);
+  
+  // Pass the matrix to the u_NormalMatrix attribute
+  var normalMat = new Matrix4();
+  normalMat.setInverseOf(cameraRotMat);
+  normalMat.transpose();
+  gl.uniformMatrix4fv(u_NormalMatrix, false, normalMat.elements);
 
   // Pass the matrix to the u_GlobalRotateMatrix attribute
   var globalRotMat = new Matrix4().rotate(g_globalAngle, 0, 1, 0);
@@ -804,6 +819,7 @@ function renderScene() {
   light.matrix.translate(g_lightPos[0], g_lightPos[1], g_lightPos[2]); // Setting the X, Y, and Z placements for the light 
   light.matrix.scale(-0.1, -0.1, -0.1); // Scaling for the light with negatives for normals
   light.matrix.translate(-0.5, -0.5, -0.5); // Setting the X, Y, and Z placements for the light
+  light.normalMatrix.setInverseOf(light.matrix).transpose(); // Setting the normal matrix for the light
   light.render(); // Rendering for the light
   
   // Draw the walls for the lighting
@@ -921,6 +937,7 @@ function renderScene() {
   var frontLeftLegThighCoordinatesMat = new Matrix4(frontLeftLegThigh.matrix); // Setting the coordinate system for the whole left leg to be the front-left leg's thigh
   frontLeftLegThigh.matrix.scale(0.25, 0.75, 0.25); // Setting the custom 1/4th, 3/4th, 1/4th scale for the front-left leg's thigh
   frontLeftLegThigh.matrix.translate(-0.5, 0, 0); // Setting the custom X placement for the front-left leg's thigh
+  frontLeftLegThigh.normalMatrix = normalMat; // Setting the normal matrix for the front-left leg's thigh
   frontLeftLegThigh.render(); // Rendering the front-left leg's thigh
 
   // Draw a front-left leg's paw
@@ -936,6 +953,7 @@ function renderScene() {
   frontLeftLegPaw.matrix.rotate(-g_frontLeftLegPawAngle, 0, 0, 1); // Setting the animation rotation for the whole front-left leg
   frontLeftLegPaw.matrix.scale(0.20, 0.25, 0.20); // Setting the custom 1/5th, 1/4th, 1/5th scale for the front-left leg's paw
   frontLeftLegPaw.matrix.translate(-0.5, 0.45, -0.001); // Setting the custom X, Y, and Z (to avoid z-buffering) placement for the front-left leg's paw
+  frontLeftLegPaw.normalMatrix = normalMat; // Setting the normal matrix for the front-left leg's paw
   frontLeftLegPaw.render(); // Rendering the front-left leg's paw
 
   // Draw a front-right leg's thigh
@@ -954,6 +972,7 @@ function renderScene() {
   var frontRightLegThighCoordinatesMat = new Matrix4(frontRightLegThigh.matrix); // Setting the coordinate system for the whole front-right leg to be the front-right leg's thigh
   frontRightLegThigh.matrix.scale(0.25, 0.75, 0.25); // Setting the custom 1/4th, 3/4th, 1/4th scale for the front-right leg's thigh
   frontRightLegThigh.matrix.translate(-0.5, 0, 0); // Setting the custom X placement for the front-right leg's thigh
+  frontRightLegThigh.normalMatrix = normalMat; // Setting the normal matrix for the front-right leg's thigh
   frontRightLegThigh.render(); // Rendering the front-right leg's thigh
 
   // Draw a front-right leg's paw
@@ -969,6 +988,7 @@ function renderScene() {
   frontRightLegPaw.matrix.rotate(-g_frontRightLegPawAngle, 0, 0, 1); // Setting the animation rotation for the whole front-right leg
   frontRightLegPaw.matrix.scale(0.20, 0.25, 0.20); // Setting the custom 1/5th, 1/4th, 1/5th scale for the front-right leg's paw
   frontRightLegPaw.matrix.translate(-0.5, 0.45, -0.001); // Setting the custom X, Y, and Z (to avoid z-buffering) placement for the front-right leg's paw
+  frontRightLegPaw.normalMatrix = normalMat; // Setting the normal matrix for the front-right leg's paw
   frontRightLegPaw.render(); // Rendering the front-right leg's paw
 
   // Draw a back-left leg's thigh
@@ -987,6 +1007,7 @@ function renderScene() {
   var backLeftLegThighCoordinatesMat = new Matrix4(backLeftLegThigh.matrix); // Setting the coordinate system for the whole back-left leg to be the back-left leg's thigh
   backLeftLegThigh.matrix.scale(0.25, 0.75, 0.25); // Setting the custom 1/4th, 3/4th, 1/4th scale for the back-left leg's thigh
   backLeftLegThigh.matrix.translate(-0.5, 0, 0); // Setting the custom X placement for the back-left leg's thigh
+  backLeftLegThigh.normalMatrix = normalMat; // Setting the normal matrix for the back-left leg's thigh
   backLeftLegThigh.render(); // Rendering the back-left leg's thigh
 
   // Draw a back-left leg's paw
@@ -1002,6 +1023,7 @@ function renderScene() {
   backLeftLegPaw.matrix.rotate(-g_backLeftLegPawAngle, 0, 0, 1); // Setting the animation rotation for the whole back-left leg
   backLeftLegPaw.matrix.scale(0.20, 0.25, 0.20); // Setting the custom 1/5th, 1/4th, 1/5th scale for the back-left leg's paw
   backLeftLegPaw.matrix.translate(-0.5, 0.45, -0.001); // Setting the custom X, Y, and Z (to avoid z-buffering) placement for the back-left leg's paw
+  backLeftLegPaw.normalMatrix = normalMat; // Setting the normal matrix for the back-left leg's paw
   backLeftLegPaw.render(); // Rendering the back-left leg's paw
 
   // Draw a back-right leg's thigh
@@ -1020,6 +1042,7 @@ function renderScene() {
   var backRightLegThighCoordinatesMat = new Matrix4(backRightLegThigh.matrix); // Setting the coordinate system for the whole front-right leg to be the back-right leg's thigh
   backRightLegThigh.matrix.scale(0.25, 0.75, 0.25); // Setting the custom 1/4th, 3/4th, 1/4th scale for the back-right leg's thigh
   backRightLegThigh.matrix.translate(-0.5, 0, 0); // Setting the custom X placement for the back-right leg's thigh
+  backRightLegThigh.normalMatrix = normalMat; // Setting the normal matrix for the back-right leg's thigh
   backRightLegThigh.render(); // Rendering the back-right leg's thigh
 
   // Draw a back-right leg's paw
@@ -1035,6 +1058,7 @@ function renderScene() {
   backRightLegPaw.matrix.rotate(-g_backRightLegPawAngle, 0, 0, 1); // Setting the animation rotation for the whole back-right leg
   backRightLegPaw.matrix.scale(0.20, 0.25, 0.20); // Setting the custom 1/5th, 1/4th, 1/5th scale for the back-right leg's paw
   backRightLegPaw.matrix.translate(-0.5, 0.45, -0.001); // Setting the custom X, Y, and Z (to avoid z-buffering) placement for the back-right leg's paw
+  backRightLegPaw.normalMatrix = normalMat; // Setting the normal matrix for the back-right leg's paw
   backRightLegPaw.render(); // Rendering the back-right leg's paw
 
   // Draw a crown
@@ -1076,6 +1100,7 @@ function renderScene() {
   tail.matrix.rotate(-0.75, 1, 0, 0); // Rotation for the tail
   tail.matrix.rotate(-g_tailAngle, 0, 0); // Setting the animation rotation for the tail
   tail.matrix.scale(0.2, 0.4, 0.2); // Flipping the tail vertically and scaling it by a 1/5th, 2/5th, 1/5th scale
+  tail.normalMatrix = normalMat; // Setting the normal matrix for the tail
   tail.render(); // Rendering the bottom tail
 
   // Check the time at the end of the function, and show on web page
