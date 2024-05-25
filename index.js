@@ -31,40 +31,56 @@ var FSHADER_SOURCE = `
   uniform sampler2D u_Sampler1;
   uniform int u_whichTexture;
   uniform vec3 u_lightPos;
-  varying vec4 v_VertPos;
+  uniform vec3 u_lightColor;
+  uniform vec3 u_ambientColor;
+  uniform vec3 u_viewDir;
+  uniform vec3 u_lightDir;
   void main() {
-      
+      vec4 color; 
       if (u_whichTexture == -3) {
-        gl_FragColor = vec4((v_Normal+1.0)/2.0, 1.0); // Use normal
+        color = vec4((v_Normal+1.0)/2.0, 1.0); // Use normal
       
       } else if (u_whichTexture == -2) {             // Use color
-        gl_FragColor = u_FragColor;
+        color = u_FragColor;
 
       } else if (u_whichTexture == -1) {      // Use UV debug color
-        gl_FragColor = vec4(v_UV,1.0,1.0);
+        color = vec4(v_UV,1.0,1.0);
 
       } else if (u_whichTexture == 0) {       // Use texture0
-        gl_FragColor = texture2D(u_Sampler0, v_UV);
+        color = texture2D(u_Sampler0, v_UV);
       
       } else if (u_whichTexture == 1) {       // Use texture1
-        gl_FragColor = texture2D(u_Sampler1, v_UV);
+        color = texture2D(u_Sampler1, v_UV);
       
       } else {                                // Error, put Reddish
-        gl_FragColor = vec4(1,.2,.2,1);
+        color = vec4(1,.2,.2,1);
+
       }
 
-      vec3 lightVector = vec3(v_VertPos) - u_lightPos;
-      float r = length(lightVector);
-      if (r < 1.0) {
-        gl_FragColor = vec4(1, 0, 0, 1);
-      } else if (r < 2.0) {
-        gl_FragColor = vec4(0, 1, 0, 1);
-      }
+      // Implementing Phong lighting
+      vec3 lightDir = normalize(u_lightPos - vec3(v_VertPos));
+      vec3 norm = normalize(v_Normal);
+      vec3 reflectDir = reflect(-lightDir, norm);
+      vec3 viewDir = normalize(u_viewDir - vec3(v_VertPos));
+
+      // Specular
+      float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+      vec3 specular = spec * u_lightColor;
+
+      // Ambient
+      vec3 ambient = color.rgb * u_ambientColor;
+
+      // Diffuse
+      float diff = max(dot(norm, lightDir), 0.0);
+      vec3 diffuse = color.rgb * u_lightColor * diff;
+
+      // Final light
+      gl_FragColor = vec4(specular + ambient + diffuse, color.a);
   }`
 
 
 // Globals for the WebGL setup
-let canvas, gl, a_Position, a_UV, u_FragColor, u_Size, u_ModelMatrix, u_ProjectionMatrix, u_ViewMatrix, u_GlobalRotateMatrix, u_Sampler0, u_Sampler1, u_whichTexture, u_lightPos;
+let canvas, gl, a_Position, a_UV, u_FragColor, u_Size, u_ModelMatrix, u_ProjectionMatrix, u_ViewMatrix, u_GlobalRotateMatrix, u_Sampler0, u_Sampler1, u_whichTexture, u_lightPos, u_lightColor, u_ambientColor, u_lightDir, u_viewDir;
 // Global for the global sideways camera angle
 let g_globalAngle = 0;
 // Globals for the performance calculation
@@ -286,6 +302,34 @@ function connectVariablesToGLSL() {
   u_lightPos = gl.getUniformLocation(gl.program, 'u_lightPos');
   if (!u_lightPos) {
     console.log('Failed to get the storage location of u_lightPos');
+    return false;
+  }
+  
+  // Get the storage location of u_lightColor
+  u_lightColor = gl.getUniformLocation(gl.program, 'u_lightColor');
+  if (!u_lightColor) {
+    console.log('Failed to get the storage location of u_lightColor');
+    return false;
+  }
+  
+  // Get the storage location of u_ambientColor
+  u_ambientColor = gl.getUniformLocation(gl.program, 'u_ambientColor');
+  if (!u_ambientColor) {
+    console.log('Failed to get the storage location of u_ambientColor');
+    return false;
+  }
+  
+  // Get the storage location of u_lightDir
+  u_lightDir = gl.getUniformLocation(gl.program, 'u_lightDir');
+  if (!u_lightDir) {
+    console.log('Failed to get the storage location of u_lightDir');
+    return false;
+  }
+  
+  // Get the storage location of u_viewDir
+  u_viewDir = gl.getUniformLocation(gl.program, 'u_viewDir');
+  if (!u_viewDir) {
+    console.log('Failed to get the storage location of u_viewDir');
     return false;
   }
 
@@ -744,20 +788,24 @@ function renderScene() {
 
   // Draw the walls for the lighting
   var walls = new Cube(); // Creating the walls as a large rectangle
-  walls.color = [1, 1, 1, 1]; // Color the walls white
+  walls.color = [0.7, 0.7, 0.7, 1]; // Color the walls white
   if (g_normalOn === true) {
     walls.textureNum = -3; // Use the normals on the walls
   } else {
     walls.textureNum = -2; // Use the colors on the walls
   }
-  walls.matrix.scale(-15, -15, -15); // Scaling for the walls with negatives for normals
+  walls.matrix.scale(-10, -10, -10); // Scaling for the walls with negatives for normals
   walls.matrix.translate(0, -0.75, 0.0); // Y placement for the walls
   walls.matrix.translate(-0.5, 0, -0.5); // X and Z placement for the walls
   walls.render(); // Rendering for the wall
 
-  // Pass the light position to GLSL
+  // Pass the light attributes to GLSL
   gl.uniform3f(u_lightPos, g_lightPos[0], g_lightPos[1], g_lightPos[2]);
-  // Draw the light
+  gl.uniform3f(u_lightDir, g_lightPos[0], g_lightPos[1], g_lightPos[2]);
+  gl.uniform3f(u_viewDir, g_camera.eye.elements[0], g_camera.eye.elements[1], g_camera.eye.elements[2]);
+  gl.uniform3f(u_lightColor, 0.1, 0.1, 0.1); // Weak white ambient light
+  gl.uniform3f(u_lightPos, 1, 1, 1); // Strong white diffuse and specular light
+  // Draw the light cube
   var light = new Cube(); // Creating the light as a large rectangle
   light.color = [2, 2, 0, 1]; // "Color" the light extra yellow
   light.textureNum = -2; // Use the colors on the light
