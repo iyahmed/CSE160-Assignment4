@@ -34,6 +34,7 @@ var FSHADER_SOURCE = `
   uniform int u_whichTexture;
   uniform vec3 u_lightPos;
   uniform vec3 u_cameraPos;
+  uniform vec3 u_lightColor;
   uniform bool u_lightOn;
   void main() {
       if (u_whichTexture == -3) {
@@ -83,11 +84,11 @@ var FSHADER_SOURCE = `
       // Phong lighting
       if (u_lightOn) {
         if (u_whichTexture == 0 || u_whichTexture == 1) {
-          gl_FragColor = vec4(specular+diffuse+ambient, 1.0);
+          gl_FragColor = vec4(specular+diffuse+ambient * vec3(u_lightColor), 1.0);
         } else if (u_whichTexture == 1) {
-          gl_FragColor = vec4(specular+diffuse+ambient, 1.0);
+          gl_FragColor = vec4(specular+diffuse+ambient * vec3(u_lightColor), 1.0);
         } else {
-          gl_FragColor = vec4(diffuse+ambient, 1.0);
+          gl_FragColor = vec4(diffuse+ambient * vec3(u_lightColor), 1.0);
         }
       }
   }`
@@ -210,10 +211,11 @@ let g_tailAngle = 0;
 let g_tailAnimation = false;
 // Global for the normals
 g_normalOn = false;
-// Global for the light position
+// Global for the light
 let g_lightPos = [0, 1, -2];
-// Global for the light boolean
+let g_lightColor = [1, 1, 1];
 let g_lightOn = true; 
+let g_lightAnimationOn = true;
 
 
 function setupWebGL() {
@@ -343,6 +345,13 @@ function connectVariablesToGLSL() {
     return false;
   }
 
+  // Get the storage location of u_lightColor
+  u_lightColor = gl.getUniformLocation(gl.program, 'u_lightColor');
+  if (!u_lightColor) {
+    console.log('Failed to get the storage location of u_lightColor');
+    return false;
+  }
+
   // Set an initial value for the matrix to identify
   var identityM = new Matrix4();
   gl.uniformMatrix4fv(u_ModelMatrix, false, identityM.elements);
@@ -388,6 +397,8 @@ function addActionsForHTMLUI() {
   // Light's Button Events
   document.getElementById('lightOn').onclick = function () { g_lightOn = true; }
   document.getElementById('lightOff').onclick = function () { g_lightOn = false; }
+  document.getElementById('lightAnimationOnButton').onclick = function () { g_lightAnimationOn = true; }
+  document.getElementById('lightAnimationOffButton').onclick = function () { g_lightAnimationOn = false; }
 
   // Front-Left Leg's Color Slider Events
   document.getElementById('frontLeftLegPawSlide').addEventListener('mousemove', function () { g_frontLeftLegPawAngle = this.value; renderScene(); });
@@ -408,13 +419,16 @@ function addActionsForHTMLUI() {
   // Tail's Color Slider Events
   document.getElementById('tailSlide').addEventListener('mousemove', function () { g_TailAngle = this.value; renderScene(); });
 
-  // Angle Slider Events
+  // Angle's Slider Event
   document.getElementById('angleSlide').addEventListener('mousemove', function () { g_globalAngle = this.value; renderScene(); });
   
-  // Light Position Slider Events
-  document.getElementById('lightSlideX').addEventListener('mousemove', function () { g_lightPos[0] = this.value / 100; renderScene(); });
-  document.getElementById('lightSlideY').addEventListener('mousemove', function () { g_lightPos[1] = this.value / 100; renderScene(); });
-  document.getElementById('lightSlideZ').addEventListener('mousemove', function () { g_lightPos[2] = this.value / 100; renderScene(); });
+  // Light's Slider Events
+  document.getElementById('lightPositionSlideX').addEventListener('mousemove', function () { g_lightPos[0] = this.value / 100; renderScene(); });
+  document.getElementById('lightPositionSlideY').addEventListener('mousemove', function () { g_lightPos[1] = this.value / 100; renderScene(); });
+  document.getElementById('lightPositionSlideZ').addEventListener('mousemove', function () { g_lightPos[2] = this.value / 100; renderScene(); });
+  document.getElementById('lightColorRedSlide').addEventListener('mousemove', function () { g_lightColor[0] = parseFloat(this.value); renderScene(); });
+  document.getElementById('lightColorBlueSlide').addEventListener('mousemove', function () { g_lightColor[1] = parseFloat(this.value); renderScene(); });
+  document.getElementById('lightColorGreenSlide').addEventListener('mousemove', function () { g_lightColor[2] = parseFloat(this.value); renderScene(); });
 }
 
 
@@ -637,7 +651,11 @@ function updateAnimationAngles() {
     g_tailAngle = 0;
   }  
 
-  g_lightPos[0] = Math.cos(g_seconds) * 2.3; // Simple light animation function
+  if (g_lightAnimationOn === true) { // Simple circular light animation
+    g_lightPos[0] = Math.cos(g_seconds) * 16;
+    // g_lightPos[1] = Math.cos(g_seconds) * 16;
+    g_lightPos[2] = Math.cos(g_seconds) * 16;
+  }
 }
 
 
@@ -810,6 +828,7 @@ function renderScene() {
   // Pass the light attributes to GLSL
   gl.uniform3f(u_lightPos, g_lightPos[0], g_lightPos[1], g_lightPos[2]);
   gl.uniform3f(u_cameraPos, g_camera.eye.elements[0], g_camera.eye.elements[1], g_camera.eye.elements[2]);
+  gl.uniform3f(u_lightColor, g_lightColor[0], g_lightColor[1], g_lightColor[2]);
   gl.uniform1i(u_lightOn, g_lightOn);
   
   // Draw the light cube
@@ -823,17 +842,17 @@ function renderScene() {
   light.render(); // Rendering for the light
   
   // Draw the walls for the lighting
-  var walls = new Cube(); // Creating the walls as a large rectangle
-  walls.color = [0.8, 0.8, 0.8, 1]; // Color the walls white
-  if (g_normalOn === true) {
-    walls.textureNum = -3; // Use the normals on the walls
-  } else {
-    walls.textureNum = -2; // Use the colors on the walls
-  }
-  walls.matrix.scale(-5, -5, -5); // Scaling for the walls with negatives for normals
-  walls.matrix.translate(0, -0.75, 0.0); // Y placement for the walls
-  walls.matrix.translate(-0.5, 0, -0.5); // X and Z placement for the walls
-  walls.render(); // Rendering for the wall
+  // var walls = new Cube(); // Creating the walls as a large rectangle
+  // walls.color = [0.8, 0.8, 0.8, 1]; // Color the walls white
+  // if (g_normalOn === true) {
+  //   walls.textureNum = -3; // Use the normals on the walls
+  // } else {
+  //   walls.textureNum = -2; // Use the colors on the walls
+  // }
+  // walls.matrix.scale(-5, -5, -5); // Scaling for the walls with negatives for normals
+  // walls.matrix.translate(0, -0.75, 0.0); // Y placement for the walls
+  // walls.matrix.translate(-0.5, 0, -0.5); // X and Z placement for the walls
+  // walls.render(); // Rendering for the wall
 
   // Draw the sphere
   var sphere = new Sphere();
@@ -848,16 +867,24 @@ function renderScene() {
   // Draw the ground cube for 32 x 32
   var ground = new Cube(); // Creating the ground as a large rectangle
   ground.color = [0, 1, 0, 1]; // Color the ground green
-  ground.textureNum = -2; // Use the colors on the ground
+  if (g_normalOn === true) {
+    ground.textureNum = -3; // Use the normals on the ground
+  } else {
+    ground.textureNum = -2; // Use the colors on the ground
+  }
   ground.matrix.translate(0, -0.75, 0.0); // Y placement for the ground
   ground.matrix.scale(32, 0.0001, 32); // Scaling for the ground
-  ground.matrix.translate(-0.5, 0, -0.5); // X and Z placement for the ground
+  ground.matrix.translate(-0.5, -0.001, -0.5); // X and Z placement for the ground
   ground.render(); // Rendering for the ground
 
   // Draw the sky cube for 100 x 100
   var sky = new Cube(); // Creating the sky as a large rectangle
   sky.color = [0, 0, 1, 1]; // Color the sky blue
-  sky.textureNum = 0; // Use the texture0 on the sky
+  if (g_normalOn === true) {
+    sky.textureNum = -3; // Use the normals on the sky
+  } else {
+    sky.textureNum = 0; // Use the texture0 on the sky
+  }
   sky.matrix.scale(100, 100, 100); // Scaling for the sky
   sky.matrix.translate(-0.5, -0.5, -0.5); // X, Y, and Z placement for the sky
   sky.render(); // Rendering for the sky
