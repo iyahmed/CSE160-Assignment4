@@ -16,8 +16,6 @@
 
   <h1>CSE 160: Assignment 4 - Lighting (Ismail Ahmed, iyahmed@ucsc.edu)</h1>
   
-  <h2>Walk on the Staircase of Graphics Next to the Statue of Pioneers, Avoid the Tricky Red Blocks of Roadblocks, and Enjoy the Dynamic Animation of the Blocky Animal of CSE160!</h2>
- 
   <p>
     Normals:
     <button type="button" id="normalOn">Normal On</button>
@@ -26,22 +24,48 @@
 
   <p>
     Light:
-    <button type="button" id="lightOn">Light On</button>
-    <button type="button" id="lightOff">Light Off</button>
+    <button type="button" id="lightsOn">Lights On</button>
+    <button type="button" id="lightsOff">Lights Off</button>
   </p>  
 
   <p>
     Normal Light:
-    Light X <input type="range" min="-1000" max="1000" value="0" class="slider" id="lightPositionSlideX">
-    Light Y <input type="range" min="-1000" max="1000" value="100" class="slider" id="lightPositionSlideY">
-    Light Z <input type="range" min="-1000" max="1000" value="-200" class="slider" id="lightPositionSlideZ">
+    <button type="button" id="normalLightOn">Light On</button>
+    <button type="button" id="normalLightOff">Light Off</button>
+    Position:
+    X <input type="range" min="-1000" max="1000" value="0" class="slider" id="normalLightPositionSlideX">
+    Y <input type="range" min="-1000" max="1000" value="100" class="slider" id="normalLightPositionSlideY">
+    Z <input type="range" min="-1000" max="1000" value="-200" class="slider" id="normalLightPositionSlideZ">
     Color:
-    Red <input type="range" min="0" max="1" value="1" step="0.01" class="slider" id="lightColorRedSlide">
-    Green <input type="range" min="0" max="1" value="1" step="0.01" class="slider" id="lightColorGreenSlide">
-    Blue <input type="range" min="0" max="1" value="1" step="0.01" class="slider" id="lightColorBlueSlide">
+    Red <input type="range" min="0" max="1" value="1" step="0.01" class="slider" id="normalLightColorRedSlide">
+    Green <input type="range" min="0" max="1" value="1" step="0.01" class="slider" id="normalLightColorGreenSlide">
+    Blue <input type="range" min="0" max="1" value="1" step="0.01" class="slider" id="normalLightColorBlueSlide">
     Animation:
-    <button type="button" id="lightAnimationOnButton">ON</button>
-    <button type="button" id="lightAnimationOffButton">OFF</button>
+    <button type="button" id="normalLightAnimationOnButton">ON</button>
+    <button type="button" id="normalLightAnimationOffButton">OFF</button>
+  </p>
+
+  <p>
+    Spotlight:
+    <button type="button" id="spotlightOn">Light On</button>
+    <button type="button" id="spotlightOff">Light Off</button>
+    Position:
+    X <input type="range" min="-1000" max="1000" value="0" class="slider" id="spotlightPositionSlideX">
+    Y <input type="range" min="-1000" max="1000" value="100" class="slider" id="spotlightPositionSlideY">
+    Z <input type="range" min="-1000" max="1000" value="-200" class="slider" id="spotlightPositionSlideZ">
+    Direction:
+    X <input type="range" min="-1000" max="1000" value="0" class="slider" id="spotlightDirectionSlideX">
+    Y <input type="range" min="-1000" max="1000" value="100" class="slider" id="spotlightDirectionSlideY">
+    Z <input type="range" min="-1000" max="1000" value="-200" class="slider" id="spotlightDirectionSlideZ">
+    Color:
+    Red <input type="range" min="0" max="1" value="1" step="0.01" class="slider" id="spotlightColorRedSlide">
+    Green <input type="range" min="0" max="1" value="1" step="0.01" class="slider" id="spotlightColorGreenSlide">
+    Blue <input type="range" min="0" max="1" value="1" step="0.01" class="slider" id="spotlightColorBlueSlide">
+
+    Cutoff Angle <input type="range" min="0" max="90" value="20" class="slider" id="spotlightCutoffAngleSlide">
+    <!-- Animation:
+    <button type="button" id="spotlightAnimationOnButton">ON</button>
+    <button type="button" id="spotlightAnimationOffButton">OFF</button> -->
   </p>
 
   <p>
@@ -104,7 +128,7 @@
   </p>
 
   <p>
-    Grader's Note: The simple story of this game is to explore the scene that highlights computer graphics and CSE160! The Staircase of Graphics is light blue and has a cool spiral pattern. The Red Blocks of Roadblocks are spread across the scene. In contrast, the Statue of Pioneers has multiple textures and is right near the center of the world, and the Blocky Animal is a dynamic and animated gray cat wearing a crown. The Staircase of Graphics is meant to symbolize the miraculous growth of computer graphics, from a niche academic interest to playing an essential world of how we view ourselves through cultural expression in CGI-made movies, TV shows, and video games. The Red Blocks of Roadblocks represent the various challenges and difficulties computer scientists had to overcome to research today's advanced understanding and practice of computer graphics. The Statue of Pioneers is meant to symbolize all people who made a positive impact on the field of computer graphics, from the early days of a few people tinkering with digital machines to the present day of massive corporations, research institutions, and governments pushing the limits of human knowledge to advance the state-of-the-art. The Blocky Animal of a gray cat wearing a crown symbolizes the progress and learning CSE160 students make in their understanding of computer graphics throughout the course.
+    Grader's Note: This scene is a modified version of my scene from Assignment 3 (with my Blocky Animal included) but lit with a Phong-based normal light (with animation) and a Phong-based spotlight.
   </p>
 
   <script src="lib/webgl-utils.js"></script>
